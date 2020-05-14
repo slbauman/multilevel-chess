@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
 
-# TMLChess.py
-# Terminal Muli-level Chess
-# Samuel Bauman 2020
+"""
+
+TMLChess.py
+Terminal Muli-level Chess
+Samuel Bauman 2020
+
+"""
 
 import curses, curses.panel
 import mlchess
