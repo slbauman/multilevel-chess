@@ -2,6 +2,7 @@ from enum import Enum
 from bitarray import bitarray
 
 class Piece(Enum):
+    EMPTY           =   0
 
     WHITE           =   0
     BLACK           =   127
@@ -149,9 +150,9 @@ class Board:
 
             for move_or_take in Board.PAWN[side]:
 
-                for point in Board.PAWN[side][move_or_take]:
+                for offset in Board.PAWN[side][move_or_take]:
 
-                    new_pos = [pos[i] + point[i] for i in range(3)]
+                    new_pos = [pos[i] + offset[i] for i in range(3)]
                     if Board.vector_in_bounds(new_pos):
 
                         new_index = Board.vector_to_index(new_pos)
@@ -159,24 +160,24 @@ class Board:
                         new_side, new_rank, new_state = Board.decode_piece(new_piece)
 
                         if move_or_take == Piece.TAKE:
-                            if new_piece > 0 and new_side != side:
+                            if new_piece != Piece.EMPTY.value and new_side != side:
                                 new_mask[new_index] = True
 
                         elif move_or_take == Piece.MOVE or move_or_take == state:
-                            if new_piece == 0:
+                            if new_piece == Piece.EMPTY.value:
                                 new_mask[new_index] = True
 
         elif rank in Board.MOVE_TAKE_POINT:
 
-            for point in Board.MOVE_TAKE_POINT[rank]:
+            for offset in Board.MOVE_TAKE_POINT[rank]:
 
-                new_pos = [pos[i] + point[i] for i in range(3)]
+                new_pos = [pos[i] + offset[i] for i in range(3)]
                 if Board.vector_in_bounds(new_pos):
 
                     new_index = Board.vector_to_index(new_pos)
                     new_piece = self.get_piece(new_index)
                     new_side, new_rank, new_state = Board.decode_piece(new_piece)
-                    if (new_piece > 0 and new_side != side) or new_piece == 0:
+                    if (new_piece != Piece.EMPTY.value and new_side != side) or new_piece == Piece.EMPTY.value:
 
                             new_mask[new_index] = True
 
@@ -194,7 +195,7 @@ class Board:
                         new_piece = self.get_piece(new_index)
                         new_side, new_rank, new_state = Board.decode_piece(new_piece)
 
-                        if new_piece > 0:
+                        if new_piece != Piece.EMPTY.value:
                             if new_side != side:
                                 new_mask[new_index] = True
                             break
@@ -206,7 +207,7 @@ class Board:
         return new_mask
 
     def select_piece(self, index):
-        if self.get_piece(index) > 0:
+        if self.get_piece(index) != Piece.EMPTY.value:
             if not index in self.masks:
                 self.masks[index] = self.gen_move_mask(index)
             self.current_mask = index
@@ -218,7 +219,7 @@ class Board:
         index_new = Board.vector_to_index(new_piece_pos)
         if index in self.masks and self.masks[index][index_new] == True:
             piece = self.get_piece(index)
-            self.set_piece(index, 0)
+            self.set_piece(index, Piece.EMPTY.value)
             self.set_piece(index_new, piece)
             self.masks.clear()
             self.current_mask = -1
@@ -236,7 +237,7 @@ class MultilevelChess:
         mask = self.board.get_mask(index)
         raw = self.board.get_piece(index)
         value = Board.decode_piece(raw)
-        return [value[0].value // 127, (value[1].value // 12) - 1, 1 if mask else 0]
+        return [value[0].value // 127, (value[1].value // 12) - 1, mask]
 
     def get_select_pos(self):
         return self.select_pos
