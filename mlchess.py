@@ -1,3 +1,11 @@
+"""
+
+mlchess.py
+Muli-level Chess
+Samuel Bauman 2020
+
+"""
+
 from enum import Enum
 from bitarray import bitarray
 
