@@ -324,7 +324,7 @@ class Board:
 
             # Update board data
             self.set_piece(from_index, Piece.EMPTY.value)
-            self.set_piece(to_new, updated_piece)
+            self.set_piece(to_index, updated_piece)
 
             # Clear and reset movement masks for next turn
             self.masks.clear()
