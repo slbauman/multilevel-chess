@@ -7,7 +7,7 @@ TMLChess is a multi-level chess client that runs in a terminal.
 
 The design and rules are based on [Millenium 3D chess](https://en.wikipedia.org/wiki/Millennium_3D_chess).
 
-## Required Python Libraries
+## Required Python Modules
 * curses
 * bitarray
 
@@ -16,7 +16,7 @@ To run the client:
 
 `python3 tmlchess.py`
 
-Arrow keys move the cursor around.
+Arrow keys move the cursor.
 
 Enter key selects or moves a piece.
 
@@ -30,4 +30,4 @@ Enter key selects or moves a piece.
 * Add saving and loading of games.
 
 ## Notes
-* So far this has only been tested and working with [Alacritty](https://github.com/alacritty/alacritty) and [kitty](https://github.com/kovidgoyal/kitty) terminal emulators on an Arch Linux machine.
+* So far this has only been tested with [Alacritty](https://github.com/alacritty/alacritty) and [kitty](https://github.com/kovidgoyal/kitty) terminal emulators in Linux.
