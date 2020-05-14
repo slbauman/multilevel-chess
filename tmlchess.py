@@ -25,17 +25,17 @@ def main():
         curses.use_default_colors()
 
         # Set up all of the colors pairs (FG, BG) to be used
-        curses.init_pair(2, 255, 249)
+        curses.init_pair(2, 255, 179)
         curses.init_pair(3, 255, 130)
-        curses.init_pair(4, 232, 249)
+        curses.init_pair(4, 232, 179)
         curses.init_pair(5, 232, 130)
 
         curses.init_pair(6, 184, 232)
 
-        curses.init_pair(7, 232, 232)
+        curses.init_pair(7, 232, 234)
         curses.init_pair(8, 232, -1)
 
-        curses.init_pair(9, 22, 249)
+        curses.init_pair(9, 22, 179)
         curses.init_pair(10, 34, 130)
         curses.init_pair(11, 160, 232)
 

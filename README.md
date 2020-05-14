@@ -9,6 +9,7 @@ The design and rules are based on [Millenium 3D chess](https://en.wikipedia.org/
 
 ## Required Python Modules
 * curses
+* enum
 * bitarray
 
 ## Usage
@@ -24,7 +25,7 @@ Enter key selects or moves a piece.
 
 `q` quits the game.
 
-## Todo
+## TO DO
 * Add all rules beyond basic moving/taking.
 * Add multiplayer over network capability using websockets.
 * Add saving and loading of games.
