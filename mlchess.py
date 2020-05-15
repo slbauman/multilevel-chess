@@ -1,3 +1,11 @@
+"""
+
+mlchess.py
+Muli-level Chess
+Samuel Bauman 2020
+
+"""
+
 from enum import Enum
 from bitarray import bitarray
 
@@ -28,6 +36,7 @@ class Piece(Enum):
 
     MOVE            =   254
     TAKE            =   255
+
 
 class Board:
 
@@ -144,7 +153,7 @@ class Board:
     @staticmethod
     def decode_piece(byte):
 
-        """ Converts a encode piece byte value (0-255) to side, rank, and state enumeration values """
+        """ Converts an encoded piece byte value (0-255) to side, rank, and state enumeration values """
 
         side = Piece(byte // 127 * 127)
         rank = Piece((byte - side.value) // 12 * 12)
@@ -160,7 +169,6 @@ class Board:
 
         if start_file: self.load(start_file)
 
-
     def load(self, file):
 
         """ Loads a saved board file in hex form and converts it to binary piece values """
@@ -169,6 +177,9 @@ class Board:
             board_data = f.readline()
         self.data = bytearray.fromhex(board_data)
 
+        # Finds the white and black king piece index values from loaded game
+        self.w_king_index = next(i for i in range(192) if Board.decode_piece(self.data[i])[:2] == [Piece.WHITE, Piece.KING])
+        self.b_king_index = next(i for i in range(192) if Board.decode_piece(self.data[i])[:2] == [Piece.BLACK, Piece.KING])
 
     def get_piece(self, index):
 
@@ -198,8 +209,8 @@ class Board:
 
         # A movement mask can be associated with any piece on the board and indicates all of the possible legal moves
         # that piece can make. All movement masks are then stored in memory (in the board.masks dictionary) while the
-        # player is deciding their move. All movement masks are cleared after each move. They are generated in an
-        # as-needed basis as the player moves the cursor over a piece without an associated movement mask.
+        # player is deciding their move. All movement masks are cleared after each move. They are generated on an
+        # as-needed basis as the player moves the cursor over pieces without an associated movement mask.
 
         # Generate a new blank mask for this piece.
         new_mask = 192 * bitarray([False])
@@ -214,7 +225,7 @@ class Board:
         # There are three categories of basic movement types: Pawn, offset, and direction.
         #
         # Pawns have unique moving/taking rules as it's mirrored for each side and they have seperate move and attack
-        # squares.
+        # positions.
         #
         # Offset movement refers to how knights kings move. They move to a specific offset relative to their position.
         #
@@ -252,8 +263,7 @@ class Board:
                     new_piece = self.get_piece(new_index)
                     new_side, new_rank, new_state = Board.decode_piece(new_piece)
                     if (new_piece != Piece.EMPTY.value and new_side != side) or new_piece == Piece.EMPTY.value:
-
-                            new_mask[new_index] = True
+                        new_mask[new_index] = True
 
         elif rank in Board.MOVE_TAKE_DIRECTION:
 
@@ -269,12 +279,13 @@ class Board:
                         new_piece = self.get_piece(new_index)
                         new_side, new_rank, new_state = Board.decode_piece(new_piece)
 
-                        if new_piece != Piece.EMPTY.value:
-                            if new_side != side:
-                                new_mask[new_index] = True
-                            break
-                        else:
+                        if new_piece != Piece.EMPTY.value and new_side != side:
                             new_mask[new_index] = True
+                            break
+                        elif new_piece == Piece.EMPTY.value:
+                            new_mask[new_index] = True
+                        else:
+                            break
 
                     else:
                         break
