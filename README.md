@@ -2,7 +2,7 @@
 
 ![Alt text](image/tmlchess_example.png?raw=true "Example Game")
 
-TMLChess is a multi-level chess client that runs in a terminal.
+multilevel chess is a 3D chess variant client that runs in a terminal.
 
 The design and rules are based on the [Millenium 3D chess](https://en.wikipedia.org/wiki/Millennium_3D_chess) variant.
 
