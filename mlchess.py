@@ -1,7 +1,7 @@
 """
 
 mlchess.py
-Muli-level Chess
+Muli-level chess
 Samuel Bauman 2020
 
 """
@@ -109,7 +109,7 @@ class Board:
     @staticmethod
     def index_in_bounds(index):
 
-        """ Returns true if the index position is a valid position on the boards """
+        """ Returns true if the index position is a valid position """
 
         return True if index >= 0 and index < 192 else False
 
@@ -117,13 +117,9 @@ class Board:
     @staticmethod
     def vector_in_bounds(vector):
 
-        """ Returns true if the list of X,Y,Z values represents a valid position on the boards """
+        """ Returns true if the list of X,Y,Z values represents a valid position """
 
-        return True if (
-            0 <= vector[0] < 8 and
-            0 <= vector[1] < 8 and
-            0 <= vector[2] < 3
-            ) else False
+        return 0 <= vector[0] < 8 and 0 <= vector[1] < 8 and 0 <= vector[2] < 3
 
 
     @staticmethod
@@ -161,11 +157,13 @@ class Board:
         return [side, rank, state]
 
 
-    def __init__(self, start_file = None):
+    def __init__(self, start_file = None, start_turn = Piece.WHITE):
 
         self.data = bytearray(192)
         self.masks = {}
         self.current_mask = -1
+        self.king = {}
+        self.turn = Piece.WHITE
 
         if start_file: self.load(start_file)
 
@@ -178,8 +176,12 @@ class Board:
         self.data = bytearray.fromhex(board_data)
 
         # Finds the white and black king piece index values from loaded game
-        self.w_king_index = next(i for i in range(192) if Board.decode_piece(self.data[i])[:2] == [Piece.WHITE, Piece.KING])
-        self.b_king_index = next(i for i in range(192) if Board.decode_piece(self.data[i])[:2] == [Piece.BLACK, Piece.KING])
+        self.king[Piece.WHITE] = next(
+            i for i in range(192) if Board.decode_piece(self.data[i])[:2] == [Piece.WHITE, Piece.KING]
+        )
+        self.king[Piece.BLACK] = next(
+            i for i in range(192) if Board.decode_piece(self.data[i])[:2] == [Piece.BLACK, Piece.KING]
+        )
 
     def get_piece(self, index):
 
@@ -195,6 +197,13 @@ class Board:
         if self.index_in_bounds(index): self.data[index] = value
 
 
+    def is_empty(self, index):
+
+        """ Determines if the board is empty at the given index position """
+
+        return True if self.get_piece(index) == Piece.EMPTY.value else False
+
+
     def get_mask(self, index):
 
         """ Returns the mask bit for the given index. Used to determine if the index position is a legal move """
@@ -203,7 +212,7 @@ class Board:
         else self.masks[self.current_mask][index]
 
 
-    def generate_move_mask(self, index):
+    def generate_move_mask(self, index, test_piece = None):
 
         """ Generates a movement mask for a particular piece and returns it. """
 
@@ -217,7 +226,7 @@ class Board:
 
         # Get information from the board about the current piece.
         pos = Board.index_to_vector(index)
-        piece = self.get_piece(index)
+        piece = self.get_piece(index) if test_piece == None else test_piece
         side, rank, state = Board.decode_piece(piece)
 
 
@@ -289,12 +298,19 @@ class Board:
 
                     else:
                         break
+
+        if not test_piece:
+            for i in range(192):
+                if new_mask[i]:
+                    check = self.move_results_in_check(side,index,i)
+                    new_mask[i] = not check
+
         return new_mask
 
 
     def select_piece(self, index):
 
-        """ Show the movement mask for a particular piece. """
+        """ Show the movement mask for a particular piece """
 
         # If there is no piece at the selected index position, set the movement mask to -1, which results in a mask of 
         # all 0s.
@@ -302,16 +318,15 @@ class Board:
         # If there is a piece at the selected index but no mask exists, generate a new mask using gen_move_mask and add
         # it to the masks dictionary. The mask dictionary should be cleared after each move as it will need to be
         # updated.
-
         if self.get_piece(index) != Piece.EMPTY.value:
-            if not index in self.masks:
+            if index not in self.masks:
                 self.masks[index] = self.generate_move_mask(index)
             self.current_mask = index
         else:
             self.current_mask = -1
 
 
-    def move_piece(self, from_pos, to_pos):
+    def move_piece(self, from_pos, to_pos, local_move):
 
         """ Moves the current piece in 'from_pos' to 'to_pos' """
 
@@ -321,14 +336,20 @@ class Board:
 
         # Proceeds with movement if from_index has a movement mask and the to_index is listed as a legal move in the
         # from_index movement mask.
-        if from_index in self.masks and self.masks[from_index][to_index] == True:
+        if from_index not in self.masks:
+            self.masks[from_index] = self.generate_move_mask(from_index)
+
+        if self.masks[from_index][to_index] == True:
 
             # Gets piece information
             piece = self.get_piece(from_index)
-            rank, side, state = Board.decode_piece(piece)
+            side, rank, state = Board.decode_piece(piece)
 
-            # Update state to normal if previously unmoved
+            # Update piece state to normal if previously unmoved
             if state == Piece.UNMOVED: state = Piece.NORMAL
+            if rank == Piece.KING:
+                self.king[side] = to_index
+
 
             # Encode the piece information
             updated_piece = Board.encode_piece(rank, side, state)
@@ -341,17 +362,55 @@ class Board:
             self.masks.clear()
             self.current_mask = -1
 
+            if local_move:
+                self.turn = Piece.BLACK if self.turn == Piece.WHITE else Piece.WHITE
+
+
+
+    def move_results_in_check(self, king_side, from_index, to_index):
+
+        """ Performs a temporary move to determine if that move would result in check """
+
+        from_piece = self.get_piece(from_index)
+        to_piece = self.get_piece(to_index)
+
+        self.set_piece(from_index, Piece.EMPTY.value)
+        self.set_piece(to_index, from_piece)
+
+        result = False
+
+        king_index = self.king[king_side]
+        opponent_side = Piece.WHITE if king_side == Piece.BLACK else Piece.BLACK
+        if king_index == from_index: king_index = to_index
+
+        for test_rank in [Piece.PAWN, Piece.BISHOP, Piece.KNIGHT, Piece.ROOK, Piece.QUEEN, Piece.KING]:
+            test_mask = self.generate_move_mask(
+                king_index,
+                Board.encode_piece(king_side, test_rank, Piece.NORMAL)
+            )
+            for index in range(192):
+                if test_mask[index] and not self.is_empty(index):
+                    if Board.decode_piece(self.get_piece(index))[:2] == [opponent_side, test_rank]:
+                        result = True
+                        break
+            if result: break
+
+        self.set_piece(from_index, from_piece)
+        self.set_piece(to_index, to_piece)
+
+        return result
 
 
 class MultilevelChess:
 
     """ Class used for abstracting some of the game logic and interfacing with tmlchess.py """
 
-    def __init__(self):
+    def __init__(self, player_sides):
         self.board = Board("board_start.dat")
         self.old_select_pos =   [ 0, 0, 0]
         self.select_pos =       [ 0, 0, 0]
         self.selected = False
+        self.sides = player_sides
 
     def get_board_at(self, x, y, z):
         index = Board.vector_to_index([x,y,z])
@@ -370,13 +429,14 @@ class MultilevelChess:
                 self.board.select_piece(Board.vector_to_index(self.select_pos))
 
     def set_select(self, value):
-        if not self.selected:
-            if value:
-                self.board.select_piece(Board.vector_to_index(self.select_pos))
-                self.old_select_pos = self.select_pos
-            else:
-                self.current_mask = -1
+        piece_side = Board.decode_piece(self.board.get_piece(Board.vector_to_index(self.select_pos)))[0]
+        empty_piece = self.board.is_empty(Board.vector_to_index(self.select_pos))
+        if not empty_piece and piece_side == self.board.turn and self.board.turn in self.sides:
+            self.board.select_piece(Board.vector_to_index(self.select_pos))
+            self.old_select_pos = self.select_pos
             self.selected = True
+        elif self.board.turn in self.sides:
+            self.board.move_piece(self.old_select_pos, self.select_pos, True)
+            self.selected = False
         else:
-            self.board.move_piece(self.old_select_pos, self.select_pos)
             self.selected = False

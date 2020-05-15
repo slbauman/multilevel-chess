@@ -1,9 +1,7 @@
-#!/usr/bin/env python3
-
 """
 
-TMLChess.py
-Terminal Muli-level Chess
+tmlchess.py
+Muli-level chess terminal client
 Samuel Bauman 2020
 
 """
@@ -43,14 +41,19 @@ def main():
         curses.init_pair(10, 34, 130)
         curses.init_pair(11, 160, 232)
 
+        curses.init_pair(12, 135, 232)
+
         # Set up curses environment
         curses.noecho()
         curses.cbreak()
         curses.curs_set(0)
         stdscr.keypad(1)
+        curses.mousemask(1)
 
         panel = curses.panel.new_panel(stdscr)
-        game = mlchess.MultilevelChess()
+        game = mlchess.MultilevelChess([mlchess.Piece.WHITE, mlchess.Piece.BLACK])
+
+        click_select = False
 
         stdscr.refresh()
 
@@ -78,7 +81,11 @@ def main():
                         pos_x = os_x + (x * 2) + (z * 18)
 
                         # Highligts current square if it currently selected
-                        if select_pos == [x,y,z]: color_P = 6
+                        if select_pos == [x,y,z]:
+                            color_P = 6
+
+                        if game.old_select_pos == [x,y,z] and game.selected:
+                            color_P = 12
 
 
                         # This sets the text to be drawn for the current grid position 
@@ -112,6 +119,7 @@ def main():
                                 "  " if y in range(7-z,8) else " ",
                                 curses.color_pair(7))
 
+            panel.window().addstr(1, 2, "Turn: " + ("W" if game.board.turn == mlchess.Piece.WHITE else "B"))
             # Handle keyboard input from the player
             c = stdscr.getch()
             if c == ord("q"):
@@ -130,14 +138,24 @@ def main():
                 game.set_select_pos([select_pos[0],select_pos[1],select_pos[2]-1])
             elif c == 10:
                 game.set_select(True)
+            elif c == curses.KEY_MOUSE:
+                try:
+                    _, mx, my, _, _ = curses.getmouse()
+                    board_x = ((mx - os_x) % 18) // 2
+                    board_y = (my - os_y) + ((mx - os_x) // 18)
+                    board_z = ((mx - os_x) // 18)
+                    game.set_select_pos([board_x, board_y, board_z])
+                    game.set_select(True)
+                except:
+                    pass
+
             #elif c == curses.KEY_RESIZE:
             #   # This should resize the terminal, but only seems to only lock up the program
             #   # when the terminal is resized. Disabling for now.
             #    y, x = stdscr.getmaxyx()
             #    curses.resizeterm(y, x)
             #    stdscr.refresh()
-
-            curses.panel.update_panels(); #stdscr.refresh()
+            curses.panel.update_panels(); stdscr.refresh()
 
     finally:
         # Clean up and exit
