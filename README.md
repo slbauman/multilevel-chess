@@ -1,15 +1,12 @@
-# TMLChess
-Terminal multi-level chess
+# multilevel chess
 
 ![Alt text](image/tmlchess_example.png?raw=true "Example Game")
 
-TMLChess is a multi-level chess client that runs in a terminal.
+multilevel chess is a 3D chess variant client that runs in a terminal.
 
-The design and rules are based on [Millenium 3D chess](https://en.wikipedia.org/wiki/Millennium_3D_chess).
+The design and rules are based on the [Millenium 3D chess](https://en.wikipedia.org/wiki/Millennium_3D_chess) variant.
 
-## Required Python Modules
-* curses
-* enum
+## Nonstandard Python Modules
 * bitarray
 
 ## Usage
@@ -19,7 +16,7 @@ To run the client:
 
 Arrow keys move the cursor.
 
-Enter key selects or moves a piece.
+Enter key or left mouse button selects and moves a piece.
 
 `,` and `.` move the cursor along the Z-axis.
 
