@@ -31,8 +31,9 @@ class Piece(Enum):
     NORMAL          =   2
     PROMOTED        =   3
     MOVED_DOUBLE    =   4
-    IN_CHECK        =   5
-    CHECK_MATE      =   6
+    CHECK_UNMOVED   =   5
+    CHECK_NORMAL    =   6
+    CHECKMATE       =   7
 
     MOVE            =   254
     TAKE            =   255
@@ -163,7 +164,7 @@ class Board:
         self.masks = {}
         self.current_mask = -1
         self.king = {}
-        self.turn = Piece.WHITE
+        self.turn = start_turn
 
         if start_file: self.load(start_file)
 
@@ -187,7 +188,7 @@ class Board:
 
         """ Returns the encoded piece byte value at the given index position """
 
-        return None if not Board.index_in_bounds(index) else self.data[index]
+        return Piece.EMPTY.value if not Board.index_in_bounds(index) else self.data[index]
 
 
     def set_piece(self, index, value):
@@ -196,6 +197,9 @@ class Board:
 
         if self.index_in_bounds(index): self.data[index] = value
 
+    def get_info(self, index):
+        info = Board.decode_piece(self.get_piece(index))
+        return {"side": info[0], "rank": info[1], "state": info[2]}
 
     def is_empty(self, index):
 
@@ -274,6 +278,26 @@ class Board:
                     if (new_piece != Piece.EMPTY.value and new_side != side) or new_piece == Piece.EMPTY.value:
                         new_mask[new_index] = True
 
+            # Castling logic
+            if rank == Piece.KING and state == Piece.UNMOVED:
+                rook_king_side  = Board.vector_to_index([ pos[0] - 3, pos[1], pos[2] ])
+                king_side_1     = Board.vector_to_index([ pos[0] - 2, pos[1], pos[2] ])
+                king_side_2     = Board.vector_to_index([ pos[0] - 1, pos[1], pos[2] ])
+                queen_side_1    = Board.vector_to_index([ pos[0] + 1, pos[1], pos[2] ])
+                queen_side_2    = Board.vector_to_index([ pos[0] + 2, pos[1], pos[2] ])
+                queen_side_3    = Board.vector_to_index([ pos[0] + 3, pos[1], pos[2] ])
+                rook_queen_side = Board.vector_to_index([ pos[0] + 4, pos[1], pos[2] ])
+
+                # Check kingside castling
+                if (self.is_empty(king_side_1) and self.is_empty(king_side_2) and
+                    self.get_info(rook_king_side)["state"] == Piece.UNMOVED):
+                    new_mask[king_side_1] = True
+
+                # Check queenside castling
+                if (self.is_empty(queen_side_1) and self.is_empty(queen_side_2) and self.is_empty(queen_side_3) and
+                    self.get_info(rook_queen_side)["state"] == Piece.UNMOVED):
+                    new_mask[queen_side_2] = True
+
         elif rank in Board.MOVE_TAKE_DIRECTION:
 
             for direction in Board.MOVE_TAKE_DIRECTION[rank]:
@@ -299,6 +323,8 @@ class Board:
                     else:
                         break
 
+        # Iterates through all mask bits in the newly generated mask and removes all locations that would result in 
+        # check for this player.
         if not test_piece:
             for i in range(192):
                 if new_mask[i]:
@@ -316,7 +342,7 @@ class Board:
         # all 0s.
         #
         # If there is a piece at the selected index but no mask exists, generate a new mask using gen_move_mask and add
-        # it to the masks dictionary. The mask dictionary should be cleared after each move as it will need to be
+        # it to the masks dictionary. The mask dictionary should be cleared after each turn as it will need to be
         # updated.
         if self.get_piece(index) != Piece.EMPTY.value:
             if index not in self.masks:
@@ -326,46 +352,89 @@ class Board:
             self.current_mask = -1
 
 
-    def move_piece(self, from_pos, to_pos, local_move):
+    def move_piece(self, from_pos, to_pos, update_turn = True, castle_move = False):
 
-        """ Moves the current piece in 'from_pos' to 'to_pos' """
+        """ Moves the current piece in 'from_pos' to 'to_pos'. Does not check for legality but assumes move is based
+        on legal movement masks already generated. """
 
-        # Gets the index values for the from and to positions
+        # Gets the index values for the from and to positions.
         from_index = Board.vector_to_index(from_pos)
         to_index = Board.vector_to_index(to_pos)
 
         # Proceeds with movement if from_index has a movement mask and the to_index is listed as a legal move in the
         # from_index movement mask.
-        if from_index not in self.masks:
+        if not castle_move and from_index not in self.masks:
             self.masks[from_index] = self.generate_move_mask(from_index)
 
-        if self.masks[from_index][to_index] == True:
+        if castle_move or self.masks[from_index][to_index] == True:
 
-            # Gets piece information
+            # Gets piece information.
             piece = self.get_piece(from_index)
             side, rank, state = Board.decode_piece(piece)
 
-            # Update piece state to normal if previously unmoved
-            if state == Piece.UNMOVED: state = Piece.NORMAL
+            # Update piece state to normal if previously unmoved or in check.
+            if state in [Piece.UNMOVED, Piece.CHECK_UNMOVED, Piece.CHECK_NORMAL]:
+                state = Piece.NORMAL
+
+            # Update local king index variable.
             if rank == Piece.KING:
                 self.king[side] = to_index
+                # Check if move is a castle move and move rook accordingly.
+
+                # Check king side castling.
+                if to_pos[0] == from_pos[0] - 2:
+                    rook_from = [from_pos[0] - 3, from_pos[1], from_pos[2]]
+                    rook_to = [from_pos[0] - 1, from_pos[1], from_pos[2]]
+                    self.move_piece(rook_from, rook_to, False, True)
+
+                # Check queen side castling.
+                elif to_pos[0] == from_pos[0] + 2:
+                    rook_from = [from_pos[0] + 4, from_pos[1], from_pos[2]]
+                    rook_to = [from_pos[0] + 1, from_pos[1], from_pos[2]]
+                    self.move_piece(rook_from, rook_to, False, True)
 
 
-            # Encode the piece information
+            # Encode the piece information.
             updated_piece = Board.encode_piece(rank, side, state)
 
-            # Update board data
+            # Update board data.
             self.set_piece(from_index, Piece.EMPTY.value)
             self.set_piece(to_index, updated_piece)
 
-            # Clear and reset movement masks for next turn
+            # Clear and reset movement masks for next turn.
             self.masks.clear()
             self.current_mask = -1
 
-            if local_move:
+            # Update the check/checkmate state of both kings after each move.
+            for check_side in [Piece.WHITE, Piece.BLACK]:
+                king_index = self.king[check_side]
+                king_state = self.get_info(king_index)["state"]
+                if self.move_results_in_check(check_side, king_index, king_index):
+
+                    # Check_side's king is in check, now test if it is checkmate by testing if any pieces have legal
+                    # moves left.
+                    checkmate = True
+                    for i in range(192):
+                        if not self.is_empty(i) and self.get_info(i)["side"] == check_side:
+                            if self.generate_move_mask(i).count() > 0:
+                                checkmate = False
+                                break
+
+                    if checkmate:
+                        new_check_state = Piece.CHECKMATE
+                        self.turn = Piece.CHECKMATE
+                    else:
+                        new_check_state =\
+                        Piece.CHECK_NORMAL if king_state in [Piece.NORMAL, Piece.CHECK_NORMAL] else Piece.CHECK_UNMOVED
+
+                    # Finally, update king's state to checkmate or just check.
+                    self.set_piece(king_index, Board.encode_piece(check_side, Piece.KING, new_check_state))
+
+            # Change turn.
+            if update_turn and not self.turn == Piece.CHECKMATE:
                 self.turn = Piece.BLACK if self.turn == Piece.WHITE else Piece.WHITE
 
-
+                ## To-do: Send turn to opponent player here in a socketserver game
 
     def move_results_in_check(self, king_side, from_index, to_index):
 
@@ -403,7 +472,7 @@ class Board:
 
 class MultilevelChess:
 
-    """ Class used for abstracting some of the game logic and interfacing with tmlchess.py """
+    """ Class used for abstracting some of the game logic and interfacing with tmlchess.py. """
 
     def __init__(self, player_sides):
         self.board = Board("board_start.dat")

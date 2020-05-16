@@ -119,7 +119,11 @@ def main():
                                 "  " if y in range(7-z,8) else " ",
                                 curses.color_pair(7))
 
-            panel.window().addstr(1, 2, "Turn: " + ("W" if game.board.turn == mlchess.Piece.WHITE else "B"))
+            panel.window().addstr(0, 2, "Turn: " + ("W" if game.board.turn == mlchess.Piece.WHITE else "B"))
+            panel.window().addstr(1, 2, "WK " + str(game.board.get_info(game.board.king[mlchess.Piece.WHITE])["state"].name).ljust(15))
+            panel.window().addstr(2, 2, "BK " + str(game.board.get_info(game.board.king[mlchess.Piece.BLACK])["state"].name).ljust(15))
+#            panel.window().addstr(2, 2, "bk " + ())
+
             # Handle keyboard input from the player
             c = stdscr.getch()
             if c == ord("q"):
