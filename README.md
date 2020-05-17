@@ -35,6 +35,6 @@ Enter key or left mouse button selects and moves a piece.
 - [ ] Saving and loading of games in chess notation format.
 
 ## Notes
-* I'm working on this project because it's a fun way to learn how to implement sockets and practice efficient coding method. Do not expect extremely well written and structured code.
+* I'm working on this project because it's a fun way to learn how to use sockets and practice coding. Do not expect extremely well written and structured code.
 * So far this has only been tested with [alacritty](https://github.com/alacritty/alacritty) and [kitty](https://github.com/kovidgoyal/kitty) terminal emulators in Linux.
 * You will likely need to increase your font size for a better experience. CTRL + increases font size in alacritty and CTRL-SHIFT + increases the font size in kitty.
