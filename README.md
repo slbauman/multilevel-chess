@@ -22,11 +22,15 @@ Enter key or left mouse button selects and moves a piece.
 
 `q` quits the game.
 
-## TO DO
-* Add all rules beyond basic moving/taking.
-* Add multiplayer over network capability using websockets.
-* Add saving and loading of games.
+## To-do
+- [x] Check and checkmate.
+- [x] Castling.
+- [x] Very basic multiplayer capability using TCP sockets.
+- [ ] En passant.
+- [ ] Promotion.
+- [ ] Saving and loading of games in chess notation format.
 
 ## Notes
+* I'm working on this project because it's a fun way to learn how to implement sockets and practice efficient coding, so please do not expect well written or organized code as it's a work-in-progress.
 * So far this has only been tested with [alacritty](https://github.com/alacritty/alacritty) and [kitty](https://github.com/kovidgoyal/kitty) terminal emulators in Linux.
 * You will likely need to increase your font size for a better experience. CTRL + increases font size in alacritty and CTRL-SHIFT + increases the font size in kitty.
