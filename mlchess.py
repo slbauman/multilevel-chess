@@ -421,20 +421,29 @@ class Board:
                                 break
 
                     if checkmate:
+                        # Set the king's state to checkmate and end the game by setting the turn 
+                        # variable to neither player.
                         new_check_state = Piece.CHECKMATE
                         self.turn = Piece.CHECKMATE
                     else:
+                        # Set the king's state to check, whether or not it has moved yet.
                         new_check_state =\
                         Piece.CHECK_NORMAL if king_state in [Piece.NORMAL, Piece.CHECK_NORMAL] else Piece.CHECK_UNMOVED
+                else:
+                    # Reset the king's state if not in check anymore.
+                    new_check_state =\
+                        Piece.NORMAL if king_state in [Piece.NORMAL, Piece.CHECK_NORMAL] else Piece.UNMOVED
 
-                    # Finally, update king's state to checkmate or just check.
-                    self.set_piece(king_index, Board.encode_piece(check_side, Piece.KING, new_check_state))
+                # Finally, update king's state.
+                self.set_piece(king_index, Board.encode_piece(check_side, Piece.KING, new_check_state))
 
             # Change turn.
             if update_turn and not self.turn == Piece.CHECKMATE:
                 self.turn = Piece.BLACK if self.turn == Piece.WHITE else Piece.WHITE
 
-                ## To-do: Send turn to opponent player here in a socketserver game
+                self.last_move_from = from_index
+                self.last_move_to = to_index
+                self.last_move_piece = updated_piece
 
     def move_results_in_check(self, king_side, from_index, to_index):
 
@@ -480,6 +489,10 @@ class MultilevelChess:
         self.select_pos =       [ 0, 0, 0]
         self.selected = False
         self.sides = player_sides
+        self.turn_done = False
+
+    def is_my_turn(self):
+        return self.board.turn in self.sides
 
     def get_board_at(self, x, y, z):
         index = Board.vector_to_index([x,y,z])
@@ -506,6 +519,21 @@ class MultilevelChess:
             self.selected = True
         elif self.board.turn in self.sides:
             self.board.move_piece(self.old_select_pos, self.select_pos, True)
+            self.turn_done = True
             self.selected = False
         else:
             self.selected = False
+
+    def my_move(self):
+        lmf = self.board.last_move_from
+        lmt = self.board.last_move_to
+        lmp = self.board.last_move_piece
+        value = str(hex(lmf)[2:4].zfill(2) + hex(lmt)[2:4].zfill(2) + hex(lmp)[2:4].zfill(2))
+        return value
+
+    def opponent_move(self, value):
+        move_from = int("0x"+value[0:2],0)
+        move_to = int("0x"+value[2:4],0)
+        move_piece = int("0x"+value[4:6],0)
+        self.board.move_piece(Board.index_to_vector(move_from), Board.index_to_vector(move_to), True)
+
