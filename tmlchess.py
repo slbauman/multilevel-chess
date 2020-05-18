@@ -22,8 +22,8 @@ DEFAULT_PORT = "51239"
 
 # Defines the symbols to be used in the terminal
 piece = {
-        'utf8': ['♚','♛','♜','♞','♝','♟',''],
-        'ascii': ['K','Q','R','N','B','P','']
+        'u': ['♚','♛','♜','♞','♝','♟','⬤ '],
+        'a': ['K','Q','R','N','B','P','[]']
         }
 
 def menu_input(stdscr, r, c, prompt_string):
@@ -44,7 +44,7 @@ def display_msg(stdscr, msg):
 def main():
     try:
         stdscr = curses.initscr()
-
+        charset = ''
         game_type = ''
         curses.start_color()
         curses.use_default_colors()
@@ -65,6 +65,9 @@ def main():
         curses.init_pair(11, 160, 232)
 
         curses.init_pair(12, 135, 232)
+
+        while charset not in ['u', 'a']:
+		        charset = menu_input(stdscr, 2, 3, "(a)scii or (u)nicode?")
 
         while game_type not in ['h', 's', 'c']:
             game_type = menu_input(stdscr, 2, 3, "Select game type; (h)otseat, (s)erver, or (c)lient?")
@@ -151,11 +154,11 @@ def main():
                         # movement mask, or highlights opponent pieces red.
 
                         if board_data[1] >= 0:
-                            text = "{:2}".format(piece['utf8'][p_id] + " ")
+                            text = "{:2}".format(piece[charset][p_id] + " ")
                             if board_data[2] == 1:
                                 color_P = 11
                         elif board_data[2] == 1:
-                            text = "⬤ "
+                            text = piece[charset][6]
                             color_P += 7
                         else:
                             text = "  "

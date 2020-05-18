@@ -1,6 +1,6 @@
 # multilevel chess
 
-![Alt text](tmlchess_example.png?raw=true "Example Game")
+![Alt text](example.png?raw=true "Example Game")
 
 multilevel chess is a 3D chess variant client that you can play in a modern Linux terminal with unicode support.
 
