@@ -67,38 +67,72 @@ def main():
         curses.init_pair(12, 135, 232)
 
         while charset not in ['u', 'a']:
-		        charset = menu_input(stdscr, 2, 3, "(a)scii or (u)nicode?")
+            charset = menu_input(stdscr, 2, 3, "(a)scii or (u)nicode?")
 
         while game_type not in ['h', 's', 'c']:
-            game_type = menu_input(stdscr, 2, 3, "Select game type; (h)otseat, (s)erver, or (c)lient?")
+            game_type = menu_input(
+                stdscr,
+                2,
+                3,
+                "Select game type; (h)otseat, (s)erver, or (c)lient?")
 
         if game_type == "s":
             HOST = menu_input(stdscr, 2, 3, "Enter address (default 0.0.0.0): ")
-            PORT = menu_input(stdscr, 2, 3, "Enter port to listen on (default %s): " % DEFAULT_PORT)
-            HOST = "0.0.0.0" if HOST == "" else HOST
-            PORT = DEFAULT_PORT if PORT == "" else PORT
+            PORT = menu_input(
+                stdscr,
+                2,
+                3,
+                "Enter port to listen on (default %s): " % DEFAULT_PORT)
+            if HOST == "": HOST = "0.0.0.0"
+            if PORT == "": PORT = DEFAULT_PORT
 
-            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            s.bind((HOST,int(PORT)))
-            s.listen()
+            game_file = menu_input(stdscr, 2, 3, "Game file (default newgame):")
+            if game_file == "": game_file = "newgame"
+
+            with open("saves/" + game_file + ".txt", "r") as file:
+                game_hex_data = file.read()
+
+            serv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            serv.bind((HOST,int(PORT)))
+            serv.listen()
 
             display_msg(stdscr, "Waiting for a client to connect...")
 
-            conn,addr = s.accept()
+            conn,addr = serv.accept()
+            conn.sendall(game_hex_data.encode())
 
             player_sides = [mlchess.Piece.WHITE]
             stdscr.clear()
 
         elif game_type == "c":
             HOST = menu_input(stdscr, 2, 3, "Enter server address: ")
-            PORT = menu_input(stdscr, 2, 3, "Enter server port (default %s): " % DEFAULT_PORT)
-            PORT = DEFAULT_PORT if PORT == "" else PORT
+            PORT = menu_input(
+                stdscr, 2, 3, "Enter server port (default %s): " % DEFAULT_PORT)
+            if HOST == "": HOST = "127.0.0.1"
+            if PORT == "": PORT = DEFAULT_PORT
 
-            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            s.connect((HOST,int(PORT)))
+            conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            conn.connect((HOST,int(PORT)))
+            try:
+                game_hex_data = conn.recv(512)
+            except socket.error as e:
+                err = e.args[0]
+                if err == errno.EAGAIN or err == errno.EWOULDBLOCK:
+                    display_msg(stdscr, "No data available")
+                    sleep(2)
+                else:
+                    display_msg(stdscr, str(e))
+                    sleep(2)
+                    sys.exit(1)
+            else:
+                game_hex_data = game_hex_data.decode()
             player_sides = [mlchess.Piece.BLACK]
             stdscr.clear()
         else:
+            game_file = menu_input(stdscr, 2, 3, "Game file (default newgame):")
+            if game_file == "": game_file = "newgame"
+            with open("saves/" + game_file + ".txt", "r") as file:
+                game_hex_data = file.read()
             player_sides = [mlchess.Piece.BLACK, mlchess.Piece.WHITE]
 
 
@@ -110,7 +144,8 @@ def main():
         curses.mousemask(1)
 
         panel = curses.panel.new_panel(stdscr)
-        game = mlchess.MultilevelChess(player_sides)
+
+        game = mlchess.MultilevelChess(player_sides, game_hex_data)
 
         dmsg = ""
 
@@ -126,13 +161,13 @@ def main():
                 for y in range(8):
                     for x in range(8):
 
-                        # Gets information about current X,Y,Z grid from the board.
+                        # Gets information about current position.
                         board_data = game.get_board_at(x,y,z)
 
-                        # Piece ID  Used for selecting corresponding UTF-8 symbol.
+                        # Piece ID  Used for selecting corresponding symbol.
                         p_id = board_data[1]
 
-                        # Sets the color pair to be used for the board and any piece.
+                        # Sets the color pair to be used.
                         color_P = ((x + y) % 2) + 2 + (board_data[0] * 2)
 
                         # Sets the screen X and Y position
@@ -147,11 +182,12 @@ def main():
                             color_P = 12
 
 
-                        # This sets the text to be drawn for the current grid position 
-                        # based on board_data[1], which is the piece rank. 
-                        # Also, based on board_data[2], it draws a green circle if the 
-                        # current grid position is a valid move position in the 
-                        # movement mask, or highlights opponent pieces red.
+                        # This sets the text to be drawn for the current grid 
+                        # position based on board_data[1], which is the piece 
+                        # rank. Also, based on board_data[2], it draws a green 
+                        # circle if the current grid position is a valid move 
+                        # position in the movement mask, or highlights opponent
+                        # pieces red.
 
                         if board_data[1] >= 0:
                             text = "{:2}".format(piece[charset][p_id] + " ")
@@ -170,7 +206,8 @@ def main():
                                 text,
                                 curses.color_pair(color_P))
 
-                        # Optional: Draws a shadow below the boards for 3D effect.
+                        # Optional: Draws a shadow below the boards for 3D-ish
+                        # effect.
                         if x == 0 or y in range(7-z,8):
                             stdscr.addstr(
                                 pos_y + z + 1,
@@ -178,11 +215,7 @@ def main():
                                 "  " if y in range(7-z,8) else " ",
                                 curses.color_pair(7))
 
-            stdscr.addstr(0, 2, "Turn: " + ("W" if game.board.turn == mlchess.Piece.WHITE else "B"))
-            w_king = "WK " + str((game.board.get_info(game.board.king[mlchess.Piece.WHITE])["state"].name).ljust(15))
-            b_king = "BK " + str((game.board.get_info(game.board.king[mlchess.Piece.BLACK])["state"].name).ljust(15))
-            stdscr.addstr(1, 2, w_king)
-            stdscr.addstr(2, 2, b_king)
+            stdscr.addstr(0,2,"Turn: " + game.turn_str())
 
             if game.is_my_turn():
                 # Handle keyboard input from the player
@@ -191,17 +224,20 @@ def main():
                 if c == ord("q"):
                     break
                 elif c == 260:
-                    game.set_select_pos([select_pos[0]-1,select_pos[1],select_pos[2]])
+                    game.set_select_pos([-1, 0, 0])
                 elif c == 259:
-                    game.set_select_pos([select_pos[0],select_pos[1]-1,select_pos[2]])
+                    game.set_select_pos([ 0,-1, 0])
                 elif c == 261:
-                    game.set_select_pos([select_pos[0]+1,select_pos[1],select_pos[2]])
+                    game.set_select_pos([ 1, 0, 0])
                 elif c == 258:
-                    game.set_select_pos([select_pos[0],select_pos[1]+1,select_pos[2]])
+                    game.set_select_pos([ 0, 1, 0])
                 elif c == ord("."):
-                    game.set_select_pos([select_pos[0],select_pos[1],select_pos[2]+1])
+                    game.set_select_pos([ 0, 0, 1])
                 elif c == ord(","):
-                    game.set_select_pos([select_pos[0],select_pos[1],select_pos[2]-1])
+                    game.set_select_pos([ 0, 0,-1])
+                elif c == ord("s"):
+                    filename = menu_input(stdscr, 2, 4, "Save name: ")
+                    game.save_current_game(filename)
                 elif c == 10:
                     game.set_select(True)
                 elif c == curses.KEY_MOUSE:
@@ -210,15 +246,16 @@ def main():
                         board_x = ((mx - os_x) % 18) // 2
                         board_y = (my - os_y) + ((mx - os_x) // 18)
                         board_z = ((mx - os_x) // 18)
-                        game.set_select_pos([board_x, board_y, board_z])
+                        game.set_select_pos(None, [board_x, board_y, board_z])
                         game.set_select(True)
                     except:
                         pass
 
-            # Checks if the client is currently running as (s)erver or (c)lient and either waits for opponent move or
-            # waits for a local move then sends the last local move to the opponenet then waits.
+            # Checks if the client is currently playing a multiplayer game and
+            # either waits for opponent move or waits for a local move then 
+            # sends the last local move to the opponenet.
             stdscr.refresh()
-            if game_type == "s":
+            if game_type in  ["s", "c"]:
 
                 if not game.is_my_turn() and not game.turn_done:
                     try:
@@ -244,38 +281,13 @@ def main():
                     conn.sendall(game.my_move().encode())
                     game.turn_done = False
 
-            elif game_type == "c":
-                if not game.is_my_turn() and not game.turn_done:
-                    try:
-                        stdscr.addstr(0,18,"Waiting for opponent . . .")
-                        stdscr.refresh()
-                        data = s.recv(6)
-                    except socket.error as e:
-                        err = e.args[0]
-                        if err == errno.EAGAIN or err == errno.EWOULDBLOCK:
-                            display_msg(stdscr, "No data available")
-                            sleep(2)
-                            continue
-                        else:
-                            display_msg(stdscr, str(e))
-                            sleep(2)
-                            sys.exit(1)
-                    else:
-                        stdscr.addstr(0,18,"                           ")
-                        stdscr.refresh()
-                        game.opponent_move(data.decode())
-
-                elif game.turn_done:
-                    s.sendall(game.my_move().encode())
-                    game.turn_done = False
-
     finally:
         # Clean up and exit
         if game_type == "s":
-            s.close()
+            serv.close()
             conn.close()
         elif game_type == "c":
-            s.close()
+            conn.close()
         curses.nocbreak()
         stdscr.keypad(0)
         curses.echo()

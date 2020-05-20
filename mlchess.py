@@ -8,6 +8,7 @@ Samuel Bauman 2020
 
 from enum import Enum
 from bitarray import bitarray
+from datetime import date
 
 class Piece(Enum):
 
@@ -41,24 +42,29 @@ class Piece(Enum):
 
 class Board:
 
-    """ This class contains the logic to store and move pieces in a multi-level chess game """
+    """ This class contains the logic for a multi-level chess game """
 
 
     # The direction vectors used by queen, bishop, and rook movement.
 
     MOVE_TAKE_DIRECTION = {
         Piece.QUEEN: [
-            [-1, 0, 0], [ 1, 0, 0], [ 0, 0,-1], [ 0, 0, 1], [-1, 0,-1], [-1, 0, 1], [ 1, 0,-1], [ 1, 0, 1], [-1,-1, 0], 
-            [ 1,-1, 0], [ 0,-1,-1], [ 0,-1, 1], [-1,-1,-1], [-1,-1, 1], [ 1,-1,-1], [ 1,-1, 1], [-1, 1, 0], [ 1, 1, 0], 
-            [ 0, 1,-1], [ 0, 1, 1], [-1, 1,-1], [-1, 1, 1], [ 1, 1,-1], [ 1, 1, 1], [ 0, 1, 0], [ 0,-1, 0]
+            [-1, 0, 0], [ 1, 0, 0], [ 0, 0,-1], [ 0, 0, 1], [-1, 0,-1],
+            [-1, 0, 1], [ 1, 0,-1], [ 1, 0, 1], [-1,-1, 0], [ 1,-1, 0],
+            [ 0,-1,-1], [ 0,-1, 1], [-1,-1,-1], [-1,-1, 1], [ 1,-1,-1],
+            [ 1,-1, 1], [-1, 1, 0], [ 1, 1, 0], [ 0, 1,-1], [ 0, 1, 1],
+            [-1, 1,-1], [-1, 1, 1], [ 1, 1,-1], [ 1, 1, 1], [ 0, 1, 0],
+            [ 0,-1, 0]
         ],
         Piece.BISHOP: [
-            [-1,-1, 0], [-1, 1, 0], [ 1,-1, 0], [ 1, 1, 0], [-1,-1, 1], [-1, 1, 1], [ 1,-1, 1], [ 1, 1, 1], [-1,-1,-1], 
-            [-1, 1,-1], [ 1,-1,-1], [ 1, 1,-1]
+            [-1,-1, 0], [-1, 1, 0], [ 1,-1, 0], [ 1, 1, 0], [-1,-1, 1],
+            [-1, 1, 1], [ 1,-1, 1], [ 1, 1, 1], [-1,-1,-1], [-1, 1,-1],
+            [ 1,-1,-1], [ 1, 1,-1]
         ],
         Piece.ROOK: [
-            [-1, 0, 0], [ 1, 0, 0], [ 0, 1, 0], [ 0,-1, 0], [ 0, 0,-1], [ 0, 0, 1], [-1, 0,-1], [ 1, 0,-1], [ 0, 1,-1], 
-            [ 0,-1,-1], [-1, 0, 1], [ 1, 0, 1], [ 0, 1, 1], [ 0,-1, 1]
+            [-1, 0, 0], [ 1, 0, 0], [ 0, 1, 0], [ 0,-1, 0], [ 0, 0,-1],
+            [ 0, 0, 1], [-1, 0,-1], [ 1, 0,-1], [ 0, 1,-1], [ 0,-1,-1],
+            [-1, 0, 1], [ 1, 0, 1], [ 0, 1, 1], [ 0,-1, 1]
         ]
     }
 
@@ -67,19 +73,24 @@ class Board:
 
     MOVE_TAKE_OFFSET = {
         Piece.KNIGHT: [
-            [ 1,-2, 0], [ 2,-1, 0], [ 2, 1, 0], [ 1, 2, 0], [-1, 2, 0], [-2, 1, 0], [-2,-1, 0], [-1,-2, 0], [ 0,-2, 1], 
-            [ 2, 0, 1], [ 0, 2, 1], [-2, 0, 1], [-1, 0, 2], [ 0,-1, 2], [ 1, 0, 2], [ 0, 1, 2], [ 0,-2,-1], [ 2, 0,-1], 
-            [ 0, 2,-1], [-2, 0,-1], [-1, 0,-2], [ 0,-1,-2], [ 1, 0,-2], [ 0, 1,-2]
+            [ 1,-2, 0], [ 2,-1, 0], [ 2, 1, 0], [ 1, 2, 0], [-1, 2, 0],
+            [-2, 1, 0], [-2,-1, 0], [-1,-2, 0], [ 0,-2, 1], [ 2, 0, 1],
+            [ 0, 2, 1], [-2, 0, 1], [-1, 0, 2], [ 0,-1, 2], [ 1, 0, 2],
+            [ 0, 1, 2], [ 0,-2,-1], [ 2, 0,-1], [ 0, 2,-1], [-2, 0,-1],
+            [-1, 0,-2], [ 0,-1,-2], [ 1, 0,-2], [ 0, 1,-2]
         ],
         Piece.KING: [
-            [-1, 1, 1], [ 0, 1, 1], [ 1, 1, 1], [-1, 0, 1], [ 0, 0, 1], [ 1, 0, 1], [-1,-1, 1], [ 0,-1, 1], [ 1,-1, 1], 
-            [-1, 1, 0], [ 0, 1, 0], [ 1, 1, 0], [-1, 0, 0], [ 1, 0, 0], [-1,-1, 0], [ 0,-1, 0], [ 1,-1, 0], [-1, 1,-1], 
-            [ 0, 1,-1], [ 1, 1,-1], [-1, 0,-1], [ 0, 0,-1], [ 1, 0,-1], [-1,-1,-1], [ 0,-1,-1], [ 1,-1,-1]
+            [-1, 1, 1], [ 0, 1, 1], [ 1, 1, 1], [-1, 0, 1], [ 0, 0, 1],
+            [ 1, 0, 1], [-1,-1, 1], [ 0,-1, 1], [ 1,-1, 1], [-1, 1, 0],
+            [ 0, 1, 0], [ 1, 1, 0], [-1, 0, 0], [ 1, 0, 0], [-1,-1, 0],
+            [ 0,-1, 0], [ 1,-1, 0], [-1, 1,-1], [ 0, 1,-1], [ 1, 1,-1],
+            [-1, 0,-1], [ 0, 0,-1], [ 1, 0,-1], [-1,-1,-1], [ 0,-1,-1],
+            [ 1,-1,-1]
         ]
     }
 
 
-    # The offset positions separated by moving and taking and by side used by pawns.
+    # The offset positions separated by side used by pawns.
 
     PAWN = {
         Piece.WHITE: {
@@ -90,7 +101,8 @@ class Board:
                 [ 0, 2, 0], [ 0, 2, 2], [ 0, 2,-2]
             ],
             Piece.TAKE: [
-                [-1, 1,-1], [-1, 1, 0], [-1, 1, 1], [ 1, 1,-1], [ 1, 1, 0], [ 1, 1, 1]
+                [-1, 1,-1], [-1, 1, 0], [-1, 1, 1], [ 1, 1,-1], [ 1, 1, 0],
+                [ 1, 1, 1]
             ]
         },
         Piece.BLACK: {
@@ -101,7 +113,8 @@ class Board:
                 [ 0,-2, 0], [ 0,-2, 2], [ 0,-2,-2]
             ],
             Piece.TAKE: [
-                [-1,-1,-1], [-1,-1, 0], [-1,-1, 1], [ 1,-1,-1], [ 1,-1, 0], [ 1,-1, 1]
+                [-1,-1,-1], [-1,-1, 0], [-1,-1, 1], [ 1,-1,-1], [ 1,-1, 0],
+                [ 1,-1, 1]
             ]
         }
     }
@@ -118,7 +131,7 @@ class Board:
     @staticmethod
     def vector_in_bounds(vector):
 
-        """ Returns true if the list of X,Y,Z values represents a valid position """
+        """ Returns true if the [X,Y,Z] values represents a valid position """
 
         return 0 <= vector[0] < 8 and 0 <= vector[1] < 8 and 0 <= vector[2] < 3
 
@@ -126,7 +139,7 @@ class Board:
     @staticmethod
     def index_to_vector(index):
 
-        """ Converts index position to list containing X,Y,Z values """
+        """ Converts index position to [X,Y,Z] values """
 
         return [ index % 8, index // 8 % 8, index // (8 * 8) ]
 
@@ -134,7 +147,7 @@ class Board:
     @staticmethod
     def vector_to_index(vector):
 
-        """ Converts a list of X,Y,Z values to a index position value. eg.:  [ 7, 7, 2] -> 191 """
+        """ Converts [X,Y,Z] values to a index position value. """
 
         return vector[0] % 8 + ((vector[1] % 8) * 8) + ((vector[2] % 8) * 8 * 8)
 
@@ -142,7 +155,7 @@ class Board:
     @staticmethod
     def encode_piece(side, rank, state):
 
-        """ Converts a piece's side, rank, and state information into an encoded byte value (0-255) """
+        """ Converts a piece's side, rank, and state into a number (0-255) """
 
         return (side.value + rank.value + state.value)
 
@@ -150,7 +163,7 @@ class Board:
     @staticmethod
     def decode_piece(byte):
 
-        """ Converts an encoded piece byte value (0-255) to side, rank, and state enumeration values """
+        """ Converts a number (0-255) to side, rank, and state values """
 
         side = Piece(byte // 127 * 127)
         rank = Piece((byte - side.value) // 12 * 12)
@@ -158,37 +171,42 @@ class Board:
         return [side, rank, state]
 
 
-    def __init__(self, start_file = None, start_turn = Piece.WHITE):
+    def __init__(self, board_data):
 
         self.data = bytearray(192)
         self.masks = {}
         self.current_mask = -1
         self.king = {}
-        self.turn = start_turn
 
-        if start_file: self.load(start_file)
+        # Set the turn to the first byte of board_date and the actual data to
+        # the rest.
+        self.turn = Piece(int.from_bytes(board_data[:1],byteorder="big"))
+        self.data = board_data[1:]
 
-    def load(self, file):
+        self.set_king_indexes()
 
-        """ Loads a saved board file in hex form and converts it to binary piece values """
+    def set_king_indexes(self):
 
-        with open(file, "r") as f:
-            board_data = f.readline()
-        self.data = bytearray.fromhex(board_data)
+        #with open(file, "r") as f:
+        #    board_data = f.readline()
+        #self.data = bytearray.fromhex(board_data)
 
         # Finds the white and black king piece index values from loaded game
         self.king[Piece.WHITE] = next(
-            i for i in range(192) if Board.decode_piece(self.data[i])[:2] == [Piece.WHITE, Piece.KING]
+            i for i in range(192) if Board.decode_piece(self.data[i])[:2] == \
+            [Piece.WHITE, Piece.KING]
         )
         self.king[Piece.BLACK] = next(
-            i for i in range(192) if Board.decode_piece(self.data[i])[:2] == [Piece.BLACK, Piece.KING]
+            i for i in range(192) if Board.decode_piece(self.data[i])[:2] == \
+            [Piece.BLACK, Piece.KING]
         )
 
     def get_piece(self, index):
 
         """ Returns the encoded piece byte value at the given index position """
 
-        return Piece.EMPTY.value if not Board.index_in_bounds(index) else self.data[index]
+        return Piece.EMPTY.value if not Board.index_in_bounds(index) \
+        else self.data[index]
 
 
     def set_piece(self, index, value):
@@ -210,20 +228,24 @@ class Board:
 
     def get_mask(self, index):
 
-        """ Returns the mask bit for the given index. Used to determine if the index position is a legal move """
+        """ Returns the mask bit for the given index.
+        Used to determine if the index position is a legal move """
 
-        return False if not Board.index_in_bounds(index) or self.current_mask == -1 \
-        else self.masks[self.current_mask][index]
+        return False if not Board.index_in_bounds(index) or \
+        self.current_mask == -1 else self.masks[self.current_mask][index]
 
 
     def generate_move_mask(self, index, test_piece = None):
 
         """ Generates a movement mask for a particular piece and returns it. """
 
-        # A movement mask can be associated with any piece on the board and indicates all of the possible legal moves
-        # that piece can make. All movement masks are then stored in memory (in the board.masks dictionary) while the
-        # player is deciding their move. All movement masks are cleared after each move. They are generated on an
-        # as-needed basis as the player moves the cursor over pieces without an associated movement mask.
+        # A movement mask can be associated with any piece on the board and 
+        # indicates all of the possible legal moves that piece can make. 
+        # All movement masks are then stored in memory (in the board.masks 
+        # dictionary) while the player is deciding their move. All movement
+        # masks are cleared after each move. They are generated on an as-needed
+        # basis as the player moves the cursor over pieces without an 
+        # associated movement mask.
 
         # Generate a new blank mask for this piece.
         new_mask = 192 * bitarray([False])
@@ -235,14 +257,14 @@ class Board:
 
 
         # Determines the movement rules to be used for the selected piece. 
-        # There are three categories of basic movement types: Pawn, offset, and direction.
-        #
-        # Pawns have unique moving/taking rules as it's mirrored for each side and they have seperate move and attack
-        # positions.
-        #
-        # Offset movement refers to how knights kings move. They move to a specific offset relative to their position.
-        #
-        # Direction movement refers to queen, rook, and bishop movement as they move/take along multiple directions.
+        # There are three categories of basic movement types: Pawn, offset, 
+        # and direction.
+        # Pawns have unique moving/taking rules as it's mirrored for each side 
+        # and they have seperate move and attack positions.
+        # Offset movement refers to how knights kings move. They move to a 
+        # specific offset relative to their position.
+        # Direction movement refers to queen, rook, and bishop movement as they
+        # move/take along multiple directions.
 
         if rank == Piece.PAWN:
 
@@ -255,13 +277,16 @@ class Board:
 
                         new_index = Board.vector_to_index(new_pos)
                         new_piece = self.get_piece(new_index)
-                        new_side, new_rank, new_state = Board.decode_piece(new_piece)
+                        new_side, new_rank, new_state = \
+                            Board.decode_piece(new_piece)
 
                         if move_or_take == Piece.TAKE:
-                            if new_piece != Piece.EMPTY.value and new_side != side:
+                            if (new_piece != Piece.EMPTY.value and
+                            new_side != side):
                                 new_mask[new_index] = True
 
-                        elif move_or_take == Piece.MOVE or move_or_take == state:
+                        elif (move_or_take == Piece.MOVE or
+                        move_or_take == state):
                             if new_piece == Piece.EMPTY.value:
                                 new_mask[new_index] = True
 
@@ -274,27 +299,41 @@ class Board:
 
                     new_index = Board.vector_to_index(new_pos)
                     new_piece = self.get_piece(new_index)
-                    new_side, new_rank, new_state = Board.decode_piece(new_piece)
-                    if (new_piece != Piece.EMPTY.value and new_side != side) or new_piece == Piece.EMPTY.value:
+                    new_side, new_rank, new_state = \
+                        Board.decode_piece(new_piece)
+                    if ((new_piece != Piece.EMPTY.value and new_side != side)
+                    or new_piece == Piece.EMPTY.value):
                         new_mask[new_index] = True
 
             # Castling logic
             if rank == Piece.KING and state == Piece.UNMOVED:
-                rook_king_side  = Board.vector_to_index([ pos[0] - 3, pos[1], pos[2] ])
-                king_side_1     = Board.vector_to_index([ pos[0] - 2, pos[1], pos[2] ])
-                king_side_2     = Board.vector_to_index([ pos[0] - 1, pos[1], pos[2] ])
-                queen_side_1    = Board.vector_to_index([ pos[0] + 1, pos[1], pos[2] ])
-                queen_side_2    = Board.vector_to_index([ pos[0] + 2, pos[1], pos[2] ])
-                queen_side_3    = Board.vector_to_index([ pos[0] + 3, pos[1], pos[2] ])
-                rook_queen_side = Board.vector_to_index([ pos[0] + 4, pos[1], pos[2] ])
+                rook_king_side  = Board.vector_to_index(
+                    [ pos[0] - 3, pos[1], pos[2] ] )
+                king_side_1     = Board.vector_to_index(
+                    [ pos[0] - 2, pos[1], pos[2] ] )
+                king_side_2     = Board.vector_to_index(
+                    [ pos[0] - 1, pos[1], pos[2] ] )
+                queen_side_1    = Board.vector_to_index(
+                    [ pos[0] + 1, pos[1], pos[2] ] )
+                queen_side_2    = Board.vector_to_index(
+                    [ pos[0] + 2, pos[1], pos[2] ] )
+                queen_side_3    = Board.vector_to_index(
+                    [ pos[0] + 3, pos[1], pos[2] ] )
+                rook_queen_side = Board.vector_to_index(
+                    [ pos[0] + 4, pos[1], pos[2] ] )
 
-                # Check kingside castling
-                if (self.is_empty(king_side_1) and self.is_empty(king_side_2) and
+                # Check king-side castling
+                if (self.is_empty(king_side_1) and
+                    self.is_empty(king_side_2) and
+                    new_mask[king_side_2] == True and
                     self.get_info(rook_king_side)["state"] == Piece.UNMOVED):
                     new_mask[king_side_1] = True
 
-                # Check queenside castling
-                if (self.is_empty(queen_side_1) and self.is_empty(queen_side_2) and self.is_empty(queen_side_3) and
+                # Check queen-side castling
+                if (self.is_empty(queen_side_1) and
+                    self.is_empty(queen_side_2) and
+                    self.is_empty(queen_side_3) and
+                    new_mask[queen_side_1] == True and
                     self.get_info(rook_queen_side)["state"] == Piece.UNMOVED):
                     new_mask[queen_side_2] = True
 
@@ -310,7 +349,8 @@ class Board:
 
                         new_index = Board.vector_to_index(new_pos)
                         new_piece = self.get_piece(new_index)
-                        new_side, new_rank, new_state = Board.decode_piece(new_piece)
+                        new_side, new_rank, new_state = \
+                            Board.decode_piece(new_piece)
 
                         if new_piece != Piece.EMPTY.value and new_side != side:
                             new_mask[new_index] = True
@@ -323,8 +363,8 @@ class Board:
                     else:
                         break
 
-        # Iterates through all mask bits in the newly generated mask and removes all locations that would result in 
-        # check for this player.
+        # Iterates through all mask bits in the newly generated mask and 
+        # removes all locations that would result in check for this player.
         if not test_piece:
             for i in range(192):
                 if new_mask[i]:
@@ -338,12 +378,12 @@ class Board:
 
         """ Show the movement mask for a particular piece """
 
-        # If there is no piece at the selected index position, set the movement mask to -1, which results in a mask of 
-        # all 0s.
-        #
-        # If there is a piece at the selected index but no mask exists, generate a new mask using gen_move_mask and add
-        # it to the masks dictionary. The mask dictionary should be cleared after each turn as it will need to be
-        # updated.
+        # If there is no piece at the selected index position, set the movement 
+        # mask to -1, which results in a mask of all 0s.
+        # If there is a piece at the selected index but no mask exists, generate
+        # a new mask using gen_move_mask and add it to the masks dictionary. 
+        # The mask dictionary should be cleared after each turn as it will need 
+        # to be updated.
         if self.get_piece(index) != Piece.EMPTY.value:
             if index not in self.masks:
                 self.masks[index] = self.generate_move_mask(index)
@@ -352,17 +392,19 @@ class Board:
             self.current_mask = -1
 
 
-    def move_piece(self, from_pos, to_pos, update_turn = True, castle_move = False):
+    def move_piece(self, from_pos, to_pos,
+        update_turn = True, castle_move = False):
 
-        """ Moves the current piece in 'from_pos' to 'to_pos'. Does not check for legality but assumes move is based
-        on legal movement masks already generated. """
+        """ Moves the current piece in 'from_pos' to 'to_pos'. Does not check
+        for legality but assumes move is based on legal movement masks already
+        generated. """
 
         # Gets the index values for the from and to positions.
         from_index = Board.vector_to_index(from_pos)
         to_index = Board.vector_to_index(to_pos)
 
-        # Proceeds with movement if from_index has a movement mask and the to_index is listed as a legal move in the
-        # from_index movement mask.
+        # Proceeds with movement if from_index has a movement mask and the 
+        # to_index is listed as a legal move in the from_index movement mask.
         if not castle_move and from_index not in self.masks:
             self.masks[from_index] = self.generate_move_mask(from_index)
 
@@ -373,7 +415,8 @@ class Board:
             side, rank, state = Board.decode_piece(piece)
 
             # Update piece state to normal if previously unmoved or in check.
-            if state in [Piece.UNMOVED, Piece.CHECK_UNMOVED, Piece.CHECK_NORMAL]:
+            if state in \
+                    [Piece.UNMOVED, Piece.CHECK_UNMOVED, Piece.CHECK_NORMAL]:
                 state = Piece.NORMAL
 
             # Update local king index variable.
@@ -409,37 +452,45 @@ class Board:
             for check_side in [Piece.WHITE, Piece.BLACK]:
                 king_index = self.king[check_side]
                 king_state = self.get_info(king_index)["state"]
-                if self.move_results_in_check(check_side, king_index, king_index):
+                if self.move_results_in_check(
+                    check_side, king_index, king_index):
 
-                    # Check_side's king is in check, now test if it is checkmate by testing if any pieces have legal
+                    # Check_side's king is in check, now test if it is checkmate
+                    # by testing if any pieces have legal
                     # moves left.
                     checkmate = True
                     for i in range(192):
-                        if not self.is_empty(i) and self.get_info(i)["side"] == check_side:
+                        if (not self.is_empty(i) and
+                            self.get_info(i)["side"] == check_side):
                             if self.generate_move_mask(i).count() > 0:
                                 checkmate = False
                                 break
 
                     if checkmate:
-                        # Set the king's state to checkmate and end the game by setting the turn 
-                        # variable to neither player.
+                        # Set the king's state to checkmate and end the game by
+                        # setting the turn variable to neither player.
                         new_check_state = Piece.CHECKMATE
                         self.turn = Piece.CHECKMATE
                     else:
-                        # Set the king's state to check, whether or not it has moved yet.
-                        new_check_state =\
-                        Piece.CHECK_NORMAL if king_state in [Piece.NORMAL, Piece.CHECK_NORMAL] else Piece.CHECK_UNMOVED
+                        # Set the king's state to check, whether or not it has 
+                        # moved yet.
+                        new_check_state = Piece.CHECK_NORMAL if king_state in \
+                            [Piece.NORMAL, Piece.CHECK_NORMAL] else \
+                            Piece.CHECK_UNMOVED
                 else:
                     # Reset the king's state if not in check anymore.
-                    new_check_state =\
-                        Piece.NORMAL if king_state in [Piece.NORMAL, Piece.CHECK_NORMAL] else Piece.UNMOVED
+                    new_check_state = Piece.NORMAL if king_state in \
+                        [Piece.NORMAL, Piece.CHECK_NORMAL] else Piece.UNMOVED
 
                 # Finally, update king's state.
-                self.set_piece(king_index, Board.encode_piece(check_side, Piece.KING, new_check_state))
+                self.set_piece(
+                    king_index,
+                    Board.encode_piece(check_side, Piece.KING, new_check_state))
 
             # Change turn.
             if update_turn and not self.turn == Piece.CHECKMATE:
-                self.turn = Piece.BLACK if self.turn == Piece.WHITE else Piece.WHITE
+                self.turn = Piece.BLACK if self.turn == Piece.WHITE else \
+                    Piece.WHITE
 
                 self.last_move_from = from_index
                 self.last_move_to = to_index
@@ -447,7 +498,8 @@ class Board:
 
     def move_results_in_check(self, king_side, from_index, to_index):
 
-        """ Performs a temporary move to determine if that move would result in check """
+        """ Performs a temporary move to determine if that move would result in
+        check """
 
         from_piece = self.get_piece(from_index)
         to_piece = self.get_piece(to_index)
@@ -461,14 +513,21 @@ class Board:
         opponent_side = Piece.WHITE if king_side == Piece.BLACK else Piece.BLACK
         if king_index == from_index: king_index = to_index
 
-        for test_rank in [Piece.PAWN, Piece.BISHOP, Piece.KNIGHT, Piece.ROOK, Piece.QUEEN, Piece.KING]:
+        for test_rank in [
+                Piece.PAWN,
+                Piece.BISHOP,
+                Piece.KNIGHT,
+                Piece.ROOK,
+                Piece.QUEEN,
+                Piece.KING]:
             test_mask = self.generate_move_mask(
                 king_index,
                 Board.encode_piece(king_side, test_rank, Piece.NORMAL)
             )
             for index in range(192):
                 if test_mask[index] and not self.is_empty(index):
-                    if Board.decode_piece(self.get_piece(index))[:2] == [opponent_side, test_rank]:
+                    if Board.decode_piece(self.get_piece(index))[:2] == \
+                            [opponent_side, test_rank]:
                         result = True
                         break
             if result: break
@@ -481,18 +540,27 @@ class Board:
 
 class MultilevelChess:
 
-    """ Class used for abstracting some of the game logic and interfacing with tmlchess.py. """
+    """ Class used for abstracting some of the game logic and interfacing with
+    tmlchess.py. """
 
-    def __init__(self, player_sides):
-        self.board = Board("board_start.dat")
+    def __init__(self, player_sides, board_hex_data):
+
+        self.board = Board(bytearray.fromhex(board_hex_data))
         self.old_select_pos =   [ 0, 0, 0]
         self.select_pos =       [ 0, 0, 0]
         self.selected = False
         self.sides = player_sides
         self.turn_done = False
 
+    def save_current_game(self, name):
+        with open("saves/" + name + ".txt", "w") as file:
+            file.write(hex(self.board.turn.value)[2:] + self.board.data.hex())
+
     def is_my_turn(self):
         return self.board.turn in self.sides
+
+    def turn_str(self):
+        return "white" if self.board.turn == Piece.WHITE else "black"
 
     def get_board_at(self, x, y, z):
         index = Board.vector_to_index([x,y,z])
@@ -504,17 +572,23 @@ class MultilevelChess:
     def get_select_pos(self):
         return self.select_pos
 
-    def set_select_pos(self, value):
+    def set_select_pos(self, offset, exact = None):
+        # Sets the currently selected grid position either to an offset of the
+        # currently selected position or to an exact position value.
+        value = [self.select_pos[i] + offset[i] for i in range(3)] if exact == \
+            None else exact
         if Board.vector_in_bounds(value):
             self.select_pos = value
             if not self.selected:
                 self.board.select_piece(Board.vector_to_index(self.select_pos))
 
     def set_select(self, value):
-        piece_side = Board.decode_piece(self.board.get_piece(Board.vector_to_index(self.select_pos)))[0]
-        empty_piece = self.board.is_empty(Board.vector_to_index(self.select_pos))
-        if not empty_piece and piece_side == self.board.turn and self.board.turn in self.sides:
-            self.board.select_piece(Board.vector_to_index(self.select_pos))
+        selected_index = Board.vector_to_index(self.select_pos)
+        piece_side = self.board.get_info(selected_index)["side"]
+        empty_piece = self.board.is_empty(selected_index)
+        if (not empty_piece and piece_side == self.board.turn and
+                self.board.turn in self.sides):
+            self.board.select_piece(selected_index)
             self.old_select_pos = self.select_pos
             self.selected = True
         elif self.board.turn in self.sides:
@@ -528,12 +602,14 @@ class MultilevelChess:
         lmf = self.board.last_move_from
         lmt = self.board.last_move_to
         lmp = self.board.last_move_piece
-        value = str(hex(lmf)[2:4].zfill(2) + hex(lmt)[2:4].zfill(2) + hex(lmp)[2:4].zfill(2))
-        return value
+        return str(hex(lmf)[2:4].zfill(2) +
+                   hex(lmt)[2:4].zfill(2) +
+                   hex(lmp)[2:4].zfill(2))
 
     def opponent_move(self, value):
         move_from = int("0x"+value[0:2],0)
         move_to = int("0x"+value[2:4],0)
         move_piece = int("0x"+value[4:6],0)
-        self.board.move_piece(Board.index_to_vector(move_from), Board.index_to_vector(move_to), True)
+        self.board.move_piece(Board.index_to_vector(move_from),
+                              Board.index_to_vector(move_to), True)
 
